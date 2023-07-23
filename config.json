@@ -1,0 +1,8 @@
+{
+    "server" : {
+        "portNumber" : 3000        
+    },
+    "fileWatcher" : {
+        "directory" : "D:/Scanner"
+    }
+}

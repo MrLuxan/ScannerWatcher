@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ScannerWatcher</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        body { padding: 0; margin: 0; }
+
+        .wrapper {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            width: 100%;
+            height: 5em;
+            background: #fff;
+
+            height: 100vh;
+        }
+
+        .wrapper>.left {
+            width: 400px;
+            background: #f9f9f9;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        #RenameForm{
+            display: grid;
+            grid-template-columns: 85px 1fr;
+        }
+
+        #followLiveDiv{
+            position: absolute;
+            top: -18px;
+            right: 20px;
+            padding: 0 5px;
+
+            background: #f9f9f9;
+        }
+
+        #fileFieldset{
+            flex: 1;
+            position: relative;
+        }
+
+        #fileList{
+            padding: 2px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .wrapper>.right {
+            background: #ccf;
+            flex: 1;
+        }
+
+        #img-wrap{
+            width: 100%;
+            height: 100%;
+        }
+
+        #fileView{
+            object-fit: contain;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <div class="left">
+
+            <fieldset id="nameFieldset">
+                <legend>Naming</legend>
+                <form id="RenameForm">
+                    OldName: <input disabled name="oldName" type="text"/><br/>
+                    Prefix: <input name="prefix" type="text"/><br/>
+                    Suffix: <input name="suffix" type="text"/><br/>
+                    Name: <input name="fileName" type="text"/><br/>
+                    <input type="submit" value="Rename">
+                </form>
+            </fieldset>
+
+            <fieldset id="fileFieldset">
+                <legend>Files</legend>
+                <div id="followLiveDiv">
+                    <input type="checkbox" id="selectOnNew" name="selectOnNew" checked>
+                    <label for="selectOnNew"> Select on new</label>
+                </div>
+                <select id="fileList" name="fileList" size="2"></select>
+            </fieldset>
+
+        </div>
+        <div class="right">
+            <div id="img-wrap">
+                <img id="fileView"/>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const serverPortNumber = <%= serverPortNumber %>;
+        const socket = new WebSocket(`ws://localhost:${serverPortNumber}`);
+        socket.addEventListener("open", (event) => {
+            //socket.send("Hello Server!");
+        });
+
+        socket.addEventListener("message", (event) => {
+            const obj = JSON.parse(event.data);        
+            if(obj.hasOwnProperty("message"))
+            {
+                console.log(obj.message);
+            }
+
+            if(obj.event == 'newfile')
+            {
+                let selectOnNew = document.getElementById('selectOnNew').checked;
+                if(selectOnNew)
+                    selectFile(obj.newFile);
+            }
+
+            if(obj.hasOwnProperty("files"))
+            {
+                let list = document.getElementById('fileList');
+                list.innerHTML = ""; 
+
+                obj.files.forEach(element => {
+                    var option = document.createElement('option');                                       
+                    option.innerHTML = element;
+                    option.value = element;
+                    list.appendChild(option);
+                });
+            }
+        });
+
+
+        document.getElementById("RenameForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            let oldName = document.getElementsByName("oldName")[0].value;
+            let newName = document.getElementsByName("prefix")[0].value + 
+                        document.getElementsByName("fileName")[0].value + 
+                        document.getElementsByName("suffix")[0].value;
+
+            socket.send(JSON.stringify({
+                'event' : 'rename',
+                'oldFileName' : oldName,
+                'newFileName' : newName,
+            }));
+
+        });
+
+        function selectFile(filename)
+        {
+            document.getElementsByName("oldName")[0].value = filename;
+            document.getElementsByName("fileName")[0].value = "";
+            document.getElementsByName("fileName")[0].focus();            
+
+            document.getElementById('fileView').src = `http://localhost:${serverPortNumber}/input/${filename}?=${Date.now()}`;        
+        }
+
+        document.getElementById("fileList").addEventListener("change", function(e) {
+            selectFile(document.getElementById("fileList").value);
+        });
+
+
+    </script>
+
+</body>
+</html>
